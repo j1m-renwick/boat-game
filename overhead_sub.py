@@ -1,11 +1,9 @@
 # Import the pygame library and initialise the game engine
 import pygame
 import math
-#from pygame import *
 from random import *
 import time
 
-# a very annoying test song
 SONG_PATH = "Neelix.mp3"
 SUB_PATH = "large.png"
 WAVE_PATH = "wave.png"
@@ -21,6 +19,7 @@ BLUE= ( 22, 148, 206)
 OFF_BLUE = (16, 127, 178)
 SCROLL_SPEED = 0.1
 SUB_MOVE_SPEED = 0.1
+
 
 class Sub:
     def __init__(self, posx, posy, width, height):
@@ -76,7 +75,6 @@ class Mine:
                     # this is a timeout reset for when a mine is never
                     # going to be vanishing (rand is not a valid one)
                     self.rand = random()
-            
 
     def move(self, submarine, torpedos):
         self.posx -= self.speed
@@ -157,6 +155,7 @@ class Wave:
         #pygame.draw.rect(screen, WHITE, [self.posx, self.posy, self.width, self.length],0)
         screen.blit(self.sprite, [self.posx, self.posy, self.width, self.length])
 
+
 class ProgressBar:
     def __init__(self, posx, posy, width, height, totalSize):
         self.posx = posx
@@ -180,6 +179,7 @@ class ProgressBar:
                                          self.posy + self.height - self.height / self.totalSize * self.progress,
                                          self.width,
                                          math.ceil(self.height / self.totalSize * self.progress)],0)
+
 
 class Torpedo:
     def __init__(self, posx, posy):
