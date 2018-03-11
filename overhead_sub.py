@@ -22,7 +22,7 @@ BLUE= ( 22, 148, 206)
 OFF_BLUE = (16, 127, 178)
 SCROLL_SPEED = 0.1
 OFF_BLACK = (60, 60, 60)
-TOTAL_TIME = 0
+SCORE = 0
 
 class Planet:
     def __init__(self, posx, posy, imagePath, speed, randomHeight = False):
@@ -48,6 +48,46 @@ class Planet:
         if (self.randomHeight):
             self.posy = randint(0, SCREEN_Y - self.height)
 
+class Moon:
+    def __init__(self, posx, posy, imagePath, speed):
+        self.posx = posx
+        self.posy = posy
+        self.sprite = pygame.image.load(imagePath).convert_alpha()
+        self.width = self.sprite.get_width();
+        self.height = self.sprite.get_height();
+        self.speed = speed
+
+    def move(self, kid):
+        if (self.posx + self.width <= 0):
+            self.reset()
+            return False
+        elif (self.isCollided(kid)):
+            return True
+        else:
+            self.posx -= self.speed
+            return False
+
+    def draw(self):
+##        pygame.draw.rect(screen, RED, [self.posx, self.posy, self.width, self.height],0)
+        screen.blit(self.sprite, [self.posx, self.posy, self.width, self.height])
+
+
+
+    def reset(self):
+        self.posx = randint(SCREEN_X, SCREEN_X+200)
+        self.posy = randint(0, SCREEN_Y - self.height)
+
+    def isCollided(self, kid):
+        mask = pygame.mask.from_surface(self.sprite)
+        otherMask = pygame.mask.from_surface(kid.sprite)
+        return not(mask.overlap(otherMask,(int(kid.posx - self.posx), int(kid.posy - self.posy))) == None)
+##        # if the start is inside then there's a collision
+##        return ((kid.posy <= self.posy <= (kid.posy+kid.height)
+##            and kid.posx <= self.posx <= (kid.posx + kid.width)) or
+##        # if the start is above but end inside or below then there's a collision
+##        (self.posy <= kid.posy and (self.posy + self.height) >= kid.posy
+##            and kid.posx <= self.posx <= (kid.posx + kid.width)))
+
 class Edible:
     def __init__(self, posx, posy, imagePath, pointsValue):
         self.posx = posx
@@ -70,6 +110,10 @@ class Edible:
     def reset(self):
         self.posx = randint(SCREEN_X, SCREEN_X+200)
         self.posy = randint(0, SCREEN_Y - self.height)
+        global SCORE
+        SCORE += self.pointsValue
+        global floatingPoints
+        floatingPoints.append(FloatingPoint(self.posx, self.posy, self.pointsValue))
 
     def isCollided(self, kid):
         # if the start is inside then there's a collision
@@ -78,6 +122,33 @@ class Edible:
         # if the start is above but end inside or below then there's a collision
         (self.posy <= kid.posy and (self.posy + self.height) >= kid.posy
             and kid.posx <= self.posx <= (kid.posx + kid.width)))
+
+class FloatingPoint:
+
+    def __init__(self, posx, posy, value):
+        self.posx = posx
+        self.posy = posy
+        self.value = value
+        self.countdown = 0
+        self.destroyAt = 1000
+
+    def move(self):
+        self.posy -= 2
+        self.countdown += 1
+
+    def draw(self):
+        # lower countdown = weaker image, when alpha is 0, self construct
+        label = myfont.render(str(self.value), 1, WHITE)
+ #       label.convert_alpha().set_alpha(translate(self.countdown, 0, self.destroyAt, 100, 0))
+        surface=pygame.Surface(label.get_size())
+        surface.blit(label, (0,0, surface.get_width(), surface.get_height()))
+ #       surface.set_alpha(int(translate(self.countdown, 0, self.destroyAt, 255, 0)))
+        #print(translate(self.countdown, 0, self.destroyAt, 255, 0))
+        screen.blit(surface, (self.posx, self.posy))
+
+    def shouldDestroy(self):
+        return self.countdown == self.destroyAt
+        
 
 class Background:
     def __init__(self, imagePath, speed):
@@ -101,19 +172,30 @@ class Background:
             self.counter = SCREEN_X
 
 class SpaceKid:
-    def __init__(self, posx, posy, width, height):
+
+    FLAME_1_PATH = 'flames/flame-1.png'
+    FLAME_2_PATH = 'flames/flame-2.png'
+    FLAME_3_PATH = 'flames/flame-3.png'
+
+    
+    def __init__(self, posx, posy):
         self.posx = posx
         self.posy = posy
-        self.width = width
-        self.height = height
         self.speed = 20
         # load sprite and resize it to match the requested dimensions
         self.sprite = pygame.image.load(SPACE_KID_PATH).convert_alpha()
-##        self.sprite = pygame.transform.scale(self.sprite, (width, height))
+        self.width = self.sprite.get_width();
+        self.height = self.sprite.get_height();
+        self.frames = []
+        self.frames.append(pygame.image.load(self.FLAME_1_PATH).convert_alpha())
+        self.frames.append(pygame.image.load(self.FLAME_2_PATH).convert_alpha())
+        self.frames.append(pygame.image.load(self.FLAME_3_PATH).convert_alpha())
+        self.frameCounter = 0
 
     def draw(self):
-        # pygame.draw.rect(screen, RED, [self.posx, self.posy, self.width, self.height],0)
-        screen.blit(self.sprite, [self.posx, self.posy, self.width, self.height])
+##        pygame.draw.rect(screen, RED, [self.posx, self.posy, self.width, self.height],0)
+        screen.blit(self.frames[self.frameCounter], [self.posx, self.posy, self.width, self.height])
+        self.frameCounter = self.frameCounter + 1 if self.frameCounter < len(self.frames) - 1 else 0
 
     def move(self, moveX, moveY):
         # 0 = no change, 1 = positive change, -1 = negative change
@@ -121,123 +203,10 @@ class SpaceKid:
             self.posy = min(SCREEN_Y-self.height, max(0, self.posy-self.speed))
         elif (moveY > 0):
             self.posy = min(SCREEN_Y-self.height, max(0, self.posy+self.speed))
-
-
-class Mine:
-    def __init__(self, posx, posy):
-            self.posx = posx
-            self.posy = posy
-            self.speed = SCROLL_SPEED
-            self.width = 50
-            self.height = 50
-            self.vanishing = False
-            self.vanishingTime = 0
-            self.timeSinceVisible = 0
-            self.alpha = 255
-            self.rand = random()
-            self.vanishingTimeOffset = randint(0, 2000)
-            self.timeSinceVisibleOffset = randint(0, 5000)
-
-    def update(self, submarine, torpedos, dt):
-        self.move(submarine, torpedos)
-        if (self.vanishing):
-            # 20 is the minimum alpha value
-            self.alpha = max(self.alpha - 1, 20)
-            self.vanishingTime += dt
-            self.timeSinceVisible = 0
-            if (self.alpha == 20 and self.vanishingTime > (3000 + self.vanishingTimeOffset)):
-                self.vanishing = False
-                self.alpha = 255
-        else:
-            self.vanishingTime = 0
-            self.timeSinceVisible += dt
-            if (self.timeSinceVisible > (2000 + self.timeSinceVisibleOffset)):
-                if (self.rand > 0.7):
-                    self.vanishing = True
-                    self.rand = random()
-                else:        
-                    # this is a timeout reset for when a mine is never
-                    # going to be vanishing (rand is not a valid one)
-                    self.rand = random()
-
-    def move(self, submarine, torpedos):
-        self.posx -= self.speed
-        if (self.posx <= 0):
-            self.reset()
-        if (self.isCollidedWithSub(submarine)):
-            print("BOOM!")
-            self.reset()
-            time.sleep(0.1)
-        for torpedo in torpedos:
-            if (self.isCollidedWithTorpedo(torpedo)):
-                print("DESTROYED!")
-                self.reset()
-                torpedos.remove(torpedo)
-
-    def reset(self):
-        self.posx = randint(SCREEN_X, SCREEN_X+100)
-        self.posy = randint(0, SCREEN_Y)
-        self.vanishing = False
-        self.vanishingTime = 0
-        self.timeSinceVisible = 0
-        self.alpha = 255
-
-    def draw(self):
-        #pygame.draw.rect(screen, OFF_BLUE, [self.posx, self.posy, self.width, self.height], 0)
-        s = pygame.Surface((self.width, self.height))  # the size of your rect
-        s.set_alpha(self.alpha)                # alpha level
-        #print(self.alpha)
-        s.fill(OFF_BLUE)           # this fills the entire surface
-        screen.blit(s, (self.posx, self.posy))
-
-    def isCollidedWithSub(self, submarine):
-        # if the start is inside then there's a collision
-        return ((submarine.posy <= self.posy <= (submarine.posy+submarine.height)
-            and submarine.posx <= self.posx <= (submarine.posx + submarine.width)) or
-        # if the start is above but end inside or below then there's a collision
-        (self.posy <= submarine.posy and (self.posy + self.height) >= submarine.posy
-            and submarine.posx <= self.posx <= (submarine.posx + submarine.width)))
-
-    def isCollidedWithTorpedo(self, torpedo):
-        # if the end of the torpedo is at the same or greater x and inside the mine then there's a collision
-        return (torpedo.posx + 5 >= self.posx and self.posy <= torpedo.posy <= self.posy + self.height)
-
-
-class Wave:
-    def __init__(self, posx, posy):
-        self.posx = posx
-        self.posy = posy
-        self.reset()
-
-    def move(self, submarine):
-        self.posx -= self.speed
-        if (self.posx <= 0 or self.isCollidedWithSub(submarine)):
-            self.posx = randint(SCREEN_X, SCREEN_X + 100)
-            self.posy = randint(0,SCREEN_Y)
-            self.reset()
-
-    def reset(self):
-        # big rand = long, fat and slow waves
-        # 6 and 10 are magic numbers!
-        rand = randint(6,10)
-        self.length = math.ceil(rand * 10)
-        self.width = int(self.length / 7.2) # doing this purely based on the wave image dimension i have
-        self.speed = 0.08
-        # load sprite and resize it to match the requested dimensions
-        self.sprite = pygame.image.load(WAVE_PATH).convert_alpha()
-        self.sprite = pygame.transform.smoothscale(self.sprite, (self.width, self.length))
-
-    def isCollidedWithSub(self, submarine):
-        # if the start is inside then there's a collision
-        return ((submarine.posy <= self.posy <= (submarine.posy+submarine.height)
-            and submarine.posx <= self.posx <= (submarine.posx + submarine.width)) or
-        # if the start is above but end inside or below then there's a collision
-        (self.posy <= submarine.posy and (self.posy + self.length) >= submarine.posy
-            and submarine.posx <= self.posx <= (submarine.posx + submarine.width)))
-
-    def draw(self):
-        #pygame.draw.rect(screen, WHITE, [self.posx, self.posy, self.width, self.length],0)
-        screen.blit(self.sprite, [self.posx, self.posy, self.width, self.length])
+        elif (moveX < 0):
+            self.posx = min(SCREEN_X/2, max(0, self.posx-self.speed))
+        elif (moveX > 0):
+            self.posx = min(SCREEN_X/2, max(0, self.posx+self.speed))
 
 
 class ProgressBar:
@@ -264,18 +233,36 @@ class ProgressBar:
                                          self.width,
                                          math.ceil(self.height / self.totalSize * self.progress)],0)
 
+#### SCREEN SWITCHING/QUITTING
 
-class Torpedo:
-    def __init__(self, posx, posy):
-        self.posx = posx
-        self.posy = posy
-        self.width = 5
+def showGameOverScreen():
+    # darken the screen
+    filter = pygame.Surface((SCREEN_X,SCREEN_Y))
+    filter.set_alpha(128)
+    filter.fill((0,0,0))
+    screen.blit(filter, (0,0))
+    # draw game over text
+    label = myfont.render("G A M E  O V E R", 1, WHITE)
+    screen.blit(label, (SCREEN_X / 2 - (label.get_width() / 2), SCREEN_Y / 2 - (label.get_height() / 2)))
+    pygame.display.flip()
+    
+def quitGame():
+    sched.shutdown()
+    pygame.quit()
 
-    def move(self):
-        self.posx +=1
+def translate(value, leftMin, leftMax, rightMin, rightMax):
+    # Figure out how 'wide' each range is
+    leftSpan = leftMax - leftMin
+    rightSpan = rightMax - rightMin
 
-    def draw(self):
-        pygame.draw.line(screen, WHITE, [self.posx, self.posy],[self.posx + self.width, self.posy])
+    # Convert the left range into a 0-1 range (float)
+    valueScaled = float(value - leftMin) / float(leftSpan)
+
+    # Convert the 0-1 range into a value in the right range.
+    return rightMin + (valueScaled * rightSpan)
+
+
+#### ART ASSETS
 
 ROCKET_MAN_SONG_PATH = 'rocket-man.mp3'
 LARGE_STAR_PATH = "start-lg.png"
@@ -292,17 +279,21 @@ LARGE_PLANET_PATH = "planet-lg.png"
 SMALL_PLANET_RED_PATH = "planet-dot-1.png"
 SMALL_PLANET_BLUE_PATH = "planet-dot-2.png"
 
-SPACE_KID_PATH = "space-kid.png"       
+SPACE_KID_PATH = "space-kid.png"
+
+FONT_PATH = "Font/Novecento WideDemiBold.otf"
+
+##GAME_OVER_TEXT_PATH = 
+
+
+## INITIALISE GAME
 
 pygame.init()
-# Open a new window
 size = (SCREEN_X, SCREEN_Y)
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("Space Boy XTreme")
-#large_star_bkgd = pygame.image.load(LARGE_STAR_PATH).convert_alpha()
-#small_star_bkgd = pygame.image.load(SMALL_STAR_PATH).convert_alpha()
-large_planet_bkgd = pygame.image.load(LARGE_PLANET_PATH).convert_alpha()
-# The loop will carry on until the user exit the game (e.g. clicks the close button).
+
+
 carryOn = True
 # The clock will be used to control how fast the screen updates
 clock = pygame.time.Clock()
@@ -310,10 +301,15 @@ clock = pygame.time.Clock()
 pygame.mixer.pre_init(44100, -16, 2, 2048) # setup mixer to avoid sound lag
 pygame.mixer.init()
 pygame.mixer.music.load(ROCKET_MAN_SONG_PATH)
-##pygame.mixer.music.play(-1)
+#pygame.mixer.music.play(-1)
 
 # --- Limit to 60 frames per second
 clock.tick(60)
+
+## TODO add this to the background planets array
+large_planet_bkgd = pygame.image.load(LARGE_PLANET_PATH).convert_alpha()
+
+floatingPoints = []
 
 # create planet objects behind space kid
 bkgrdPlanets = []
@@ -328,8 +324,8 @@ edibles.append(Edible(randint(SCREEN_X, SCREEN_X+200), randint(0, SCREEN_Y), EDI
 edibles.append(Edible(randint(SCREEN_X, SCREEN_X+200), randint(0, SCREEN_Y), EDIBLE_PINK_DOUGHNUT_PATH, 100))
 
 # create planet objects in front of space kid - these collide with him
-frgrdPlanets = []
-frgrdPlanets.append(Planet(SCREEN_X, randint(0, SCREEN_Y),MOON_PATH, 25, randomHeight=True))
+moons = []
+moons.append(Moon(SCREEN_X, randint(0, SCREEN_Y),MOON_PATH, 25))
 
 # create backdrop objects
 backgrounds = []
@@ -337,83 +333,80 @@ backgrounds.append(Background(SMALL_STAR_PATH, 0.7))
 backgrounds.append(Background(MEDIUM_STAR_PATH, 1))
 backgrounds.append(Background(LARGE_STAR_PATH, 1.5))
 
-kid = SpaceKid(55, 200, 100, 20)
-sched.add_job(trigger='interval', seconds = 10, func=lambda: frgrdPlanets.append(Planet(SCREEN_X, randint(0, SCREEN_Y),MOON_PATH, 25, randomHeight=True)))
-# -------- Main Program Loop -----------
-#wave = Wave(SCREEN_X, 50)
+kid = SpaceKid(55, 200)
+
+# set font
+myfont = pygame.font.Font(FONT_PATH, 28)
+
+## TODO add this and main loop into a standalone method
+sched.add_job(trigger='interval', seconds = 10, func=lambda: moons.append(Moon(SCREEN_X, randint(0, SCREEN_Y),MOON_PATH, 25)))
+
+# MAIN PROGRAM LOOP
 ##progressBar = ProgressBar(SCREEN_X-40, 10, 30, SCREEN_Y-20, 1000)
+gameOver = False
 while carryOn:
-    TOTAL_TIME += clock.tick()
-    for event in pygame.event.get(): # User did something
-        if event.type == pygame.QUIT: # If user clicked close
-              carryOn = False # Flag that we are done so we exit this loop
+    #clock.tick()
+    # Check inputs
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quitGame()
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 kid.move(0,-1)
             if event.key == pygame.K_DOWN:
                 kid.move(0,1)
-##            if event.key == pygame.K_RIGHT:
-##                torpedos.append(Torpedo(sub.posx + sub.width, sub.posy + (sub.height / 2)))
+            if event.key == pygame.K_RIGHT:
+                kid.move(1,0)
+            if event.key == pygame.K_LEFT:
+                kid.move(-1,0)
+                
     keys = pygame.key.get_pressed()
     if keys[pygame.K_UP]:
         kid.move(0,-1)
     elif keys[pygame.K_DOWN]:
         kid.move(0,1)
-    # Draw sea and waves
+    if keys[pygame.K_RIGHT]:
+        kid.move(1,0)
+    elif keys[pygame.K_LEFT]:
+        kid.move(-1,0)
+        
+    # Move background
     screen.fill(OFF_BLACK)
-##    screen.blit(large_star_bkgd, [0, 0, SCREEN_X, SCREEN_Y])
-##    screen.blit(small_star_bkgd, [0, 0, SCREEN_X, SCREEN_Y])
     for background in backgrounds:
         background.shiftLeft()
 
-##    screen.blit(small_star_bkgd, (0, 0), (30, 30, 500, 500))
     for planet in bkgrdPlanets:
         planet.move()
         planet.draw()
-##    shift_left()
-    
-##    screen.blit(large_planet_bkgd, [0, 0, SCREEN_X, SCREEN_Y])
-    
-##    dt = clock.tick()
-##    for mine in mines:
-##        mine.update(sub, torpedos,dt)
-##        mine.draw()
-##    for wave in waves:
-##        wave.move(sub)
-##        wave.draw()
+
     kid.draw()
 
     for edible in edibles:
         edible.move(kid)
         edible.draw()
 
-    for planet in frgrdPlanets:
-        planet.move()
-        planet.draw()
-##    for torpedo in torpedos:
-##        torpedo.move()
-##        torpedo.draw()
-##        if (torpedo.posx >= SCREEN_X):
-##            torpedos.remove(torpedo)
-    # when the progress bar is full the game is over
-##    if (progressBar.increment()):
-##        carryOn = False
-##    progressBar.draw()
-## 
-    # --- Go ahead and update the screen with what we've drawn.
+    for moon in moons:
+        gameOver = moon.move(kid)
+        moon.draw()
+
+    for point in floatingPoints:
+        point.move()
+        point.draw()
+                                                            
+                                                              
+
+    # draw score
+    label = myfont.render(str(SCORE), 1, WHITE)
+    screen.blit(label, (40, 40))
+
+    # if game over, go to summary screen
+    if (gameOver):
+        carryOn = False
+        sched.remove_all_jobs()
+        showGameOverScreen()
+
+    # render to screen
     pygame.display.flip()
-##    def some_job():
-##    print "Every 10 seconds"
-##
-##sched.add_interval_job(some_job, seconds = 10)
-##
-##    print(TOTAL_TIME)
-##    if (TOTAL_TIME % 2000 == 0):
-##        frgrdPlanets.append(Planet(SCREEN_X, randint(0, SCREEN_Y),MOON_PATH, 25, randomHeight=True))
-## 
-#Once we have exited the main program loop we can stop the game engine:
-sched.shutdown()
-pygame.quit()
 
 
 
