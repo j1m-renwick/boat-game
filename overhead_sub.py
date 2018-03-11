@@ -91,7 +91,7 @@ class Mine:
                 torpedos.remove(torpedo)
 
     def reset(self):
-        self.posx = randint(SCREEN_X, SCREEN_X+100)
+        self.posx = randint(SCREEN_X, SCREEN_X+300)
         self.posy = randint(0, SCREEN_Y)
         self.vanishing = False
         self.vanishingTime = 0
@@ -207,7 +207,7 @@ clock = pygame.time.Clock()
 pygame.mixer.pre_init(44100, -16, 2, 2048) # setup mixer to avoid sound lag
 pygame.mixer.init()
 pygame.mixer.music.load(SONG_PATH)
-pygame.mixer.music.play(-1)
+#pygame.mixer.music.play(-1)
 
 # --- Limit to 60 frames per second
 clock.tick(60)
