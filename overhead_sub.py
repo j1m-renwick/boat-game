@@ -57,30 +57,24 @@ class Moon:
         self.height = self.sprite.get_height();
         self.speed = speed
 
-    def move(self, kid):
+    def move(self):
         if (self.posx + self.width <= 0):
             self.reset()
-            return False
-        elif (self.isCollided(kid)):
-            return True
         else:
             self.posx -= self.speed
-            return False
 
     def draw(self):
 ##        pygame.draw.rect(screen, RED, [self.posx, self.posy, self.width, self.height],0)
         screen.blit(self.sprite, [self.posx, self.posy, self.width, self.height])
-
-
 
     def reset(self):
         self.posx = randint(SCREEN_X, SCREEN_X+200)
         self.posy = randint(0, SCREEN_Y - self.height)
 
     def isCollided(self, kid):
-        mask = pygame.mask.from_surface(self.sprite)
-        otherMask = pygame.mask.from_surface(kid.sprite)
-        return not(mask.overlap(otherMask,(int(kid.posx - self.posx), int(kid.posy - self.posy))) == None)
+        moonMask = pygame.mask.from_surface(self.sprite)
+        kidMask = pygame.mask.from_surface(kid.sprite)
+        return not(kidMask.overlap(moonMask,(int(self.posx - kid.posx), int(self.posy - kid.posy))) == None)
 ##        # if the start is inside then there's a collision
 ##        return ((kid.posy <= self.posy <= (kid.posy+kid.height)
 ##            and kid.posx <= self.posx <= (kid.posx + kid.width)) or
@@ -99,7 +93,11 @@ class Edible:
         self.pointsValue = pointsValue
 
     def move(self, kid):
-        if (self.isCollided(kid) or self.posx + self.width <= 0):
+        if (self.isCollided(kid)):
+            global floatingPoints
+            floatingPoints.append(FloatingPoint(self.posx, self.posy, self.pointsValue))
+            self.reset()
+        elif (self.posx + self.width <= 0):
             self.reset()
         else:
             self.posx -= self.speed
@@ -112,8 +110,6 @@ class Edible:
         self.posy = randint(0, SCREEN_Y - self.height)
         global SCORE
         SCORE += self.pointsValue
-        global floatingPoints
-        floatingPoints.append(FloatingPoint(self.posx, self.posy, self.pointsValue))
 
     def isCollided(self, kid):
         # if the start is inside then there's a collision
@@ -130,7 +126,7 @@ class FloatingPoint:
         self.posy = posy
         self.value = value
         self.countdown = 0
-        self.destroyAt = 1000
+        self.destroyAt = 60
 
     def move(self):
         self.posy -= 2
@@ -139,12 +135,14 @@ class FloatingPoint:
     def draw(self):
         # lower countdown = weaker image, when alpha is 0, self construct
         label = myfont.render(str(self.value), 1, WHITE)
- #       label.convert_alpha().set_alpha(translate(self.countdown, 0, self.destroyAt, 100, 0))
         surface=pygame.Surface(label.get_size())
+        surface.convert_alpha().fill((0, 0, 0, 0))
+        surface.set_colorkey((0,0,0))
+        width = surface.get_width()
+        height = surface.get_height()
         surface.blit(label, (0,0, surface.get_width(), surface.get_height()))
- #       surface.set_alpha(int(translate(self.countdown, 0, self.destroyAt, 255, 0)))
-        #print(translate(self.countdown, 0, self.destroyAt, 255, 0))
-        screen.blit(surface, (self.posx, self.posy))
+        surface.set_alpha(math.ceil(translate(self.countdown, 0, self.destroyAt, 255, 0)))
+        screen.blit(surface, pygame.Rect(self.posx, self.posy, width, height))
 
     def shouldDestroy(self):
         return self.countdown == self.destroyAt
@@ -250,16 +248,20 @@ def quitGame():
     sched.shutdown()
     pygame.quit()
 
-def translate(value, leftMin, leftMax, rightMin, rightMax):
-    # Figure out how 'wide' each range is
-    leftSpan = leftMax - leftMin
-    rightSpan = rightMax - rightMin
+def endLevel():
+    sched.remove_all_jobs()
+    showGameOverScreen()
 
-    # Convert the left range into a 0-1 range (float)
-    valueScaled = float(value - leftMin) / float(leftSpan)
+def translate(value, oldMin, oldMax, newMin, newMax):
+    # Figure out how 'wide' each range is
+    leftSpan = oldMax - oldMin 
+    rightSpan = newMax - newMin 
+
+    # Convert the old range into a 0-1 range (float)
+    valueScaled = float(value - oldMin) / float(leftSpan) 
 
     # Convert the 0-1 range into a value in the right range.
-    return rightMin + (valueScaled * rightSpan)
+    return newMin + (valueScaled * rightSpan)
 
 
 #### ART ASSETS
@@ -343,7 +345,6 @@ sched.add_job(trigger='interval', seconds = 10, func=lambda: moons.append(Moon(S
 
 # MAIN PROGRAM LOOP
 ##progressBar = ProgressBar(SCREEN_X-40, 10, 30, SCREEN_Y-20, 1000)
-gameOver = False
 while carryOn:
     #clock.tick()
     # Check inputs
@@ -386,24 +387,24 @@ while carryOn:
         edible.draw()
 
     for moon in moons:
-        gameOver = moon.move(kid)
+        if moon.isCollided(kid):
+            carryOn = False
+            endLevel()
+        moon.move()
         moon.draw()
 
     for point in floatingPoints:
         point.move()
-        point.draw()
+        if (point.shouldDestroy()):
+            floatingPoints.remove(point)
+        else:
+            point.draw()
                                                             
                                                               
 
     # draw score
     label = myfont.render(str(SCORE), 1, WHITE)
     screen.blit(label, (40, 40))
-
-    # if game over, go to summary screen
-    if (gameOver):
-        carryOn = False
-        sched.remove_all_jobs()
-        showGameOverScreen()
 
     # render to screen
     pygame.display.flip()
