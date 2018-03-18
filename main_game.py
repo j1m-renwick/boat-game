@@ -72,7 +72,7 @@ class Planet:
         screen.blit(self.sprite, [self.posx, self.posy, self.width, self.height])
 
     def reset(self):
-        self.posx = randint(SCREEN_X, SCREEN_X+200)
+        self.posx = randint(SCREEN_X, SCREEN_X+400)
         if (self.randomHeight):
             self.posy = randint(0, SCREEN_Y - self.height)
 
@@ -239,16 +239,13 @@ class SpaceKid:
     FLAME_1_PATH = 'flames/flame-1.png'
     FLAME_2_PATH = 'flames/flame-2.png'
     FLAME_3_PATH = 'flames/flame-3.png'
-
-    SPACE_KID_PATH = "space-kid.png"
-
     
     def __init__(self, posx, posy):
         self.posx = posx
         self.posy = posy
         self.speed = 20
         # load sprite and resize it to match the requested dimensions
-        self.sprite = pygame.image.load(self.SPACE_KID_PATH).convert_alpha()
+        self.sprite = pygame.image.load(self.FLAME_1_PATH).convert_alpha()
         self.width = self.sprite.get_width();
         self.height = self.sprite.get_height();
         self.frames = []
@@ -273,30 +270,34 @@ class SpaceKid:
         elif (moveX > 0):
             self.posx = min(SCREEN_X/2, max(0, self.posx+self.speed))
 
-
 class ProgressBar:
-    def __init__(self, posx, posy, width, height, totalSize):
+
+    SPACE_KID_PATH = "space-kid.png"
+    
+    def __init__(self, posx, posy, length, totalSize):
+        self.marker = pygame.image.load(self.SPACE_KID_PATH).convert_alpha()
+        originalWidth = self.marker.get_width();
+        originalHeight = self.marker.get_height();
+        self.marker = pygame.transform.scale(self.marker, (int(originalWidth/5), int(originalHeight/5)))
+        self.markerWidth = self.marker.get_width();
         self.posx = posx
         self.posy = posy
-        self.width = width
+        self.length = length
         self.progress = 0
         self.totalSize = totalSize
-        self.height = height
 
     def add(self, number):
         self.progress += number
         return self.progress >= self.totalSize
 
-    def increment(self):
-        self.progress += 0.01
-        return self.progress >= self.totalSize
+    def update(self):
+        self.progress += 0.5
+        return self.progress < self.totalSize
 
     def draw(self):
-        pygame.draw.rect(screen, WHITE, [self.posx, self.posy, self.width, self.height],0)
-        pygame.draw.rect(screen, GREEN, [self.posx,
-                                         self.posy + self.height - self.height / self.totalSize * self.progress,
-                                         self.width,
-                                         math.ceil(self.height / self.totalSize * self.progress)],0)
+        pygame.draw.line(screen, WHITE, (self.posx, self.posy), (self.posx + self.length, self.posy), 3)
+        screen.blit(self.marker, (int(translate(self.progress, 0, self.totalSize, 0, self.length-(self.markerWidth/2))), SCREEN_Y-50))
+
 
 class Level:
 
@@ -305,6 +306,9 @@ class Level:
         self.score = ScoreCounter(font)
 
         self.floatingPoints = []
+
+        self.progressBar = ProgressBar(20, SCREEN_Y-20, SCREEN_X-40, 1000)
+
 
         # create backdrop objects behind space kid
         self.backgrounds = []
@@ -332,7 +336,7 @@ class Level:
         # start scheduled job to generate new moon every 10 seconds
         self.sched = BackgroundScheduler()
         self.sched.start()
-        self.sched.add_job(trigger='interval', seconds = 10, func=lambda: self.moons.append(Moon(SCREEN_X, randint(0, SCREEN_Y), 25)))
+        self.sched.add_job(trigger='interval', seconds = 20, func=lambda: self.moons.append(Moon(randint(SCREEN_X, SCREEN_X + (SCREEN_X / 2)), randint(0, SCREEN_Y), 25)))
 
     def checkInputs(self, events):
         for event in pygame.event.get():
@@ -377,9 +381,7 @@ class Level:
         for moon in self.moons:
             moon.move()
             moon.draw()
-            if moon.isCollided(self.kid):
-                self.endLevel()
-                return False
+            moonCollision = moon.isCollided(self.kid)
 
         for point in self.floatingPoints:
             point.move()
@@ -389,6 +391,16 @@ class Level:
                 point.draw()
 
         self.score.draw()
+
+        canUpdate = self.progressBar.update()
+        self.progressBar.draw()
+
+        if (moonCollision):
+            self.endLevel()
+            return False
+
+        if (not(canUpdate)):
+            showEndOfLevel()
 
         return True
 
@@ -413,6 +425,18 @@ def showGameOverScreen():
     time.sleep(2)
     pygame.quit()
 
+def showEndOfLevel():
+    filter = pygame.Surface((SCREEN_X,SCREEN_Y))
+    filter.set_alpha(128)
+    filter.fill((0,0,0))
+    screen.blit(filter, (0,0))
+    # draw game over text
+    label = myfont.render("L E V E L  C O M P L E T E !", 1, WHITE)
+    screen.blit(label, (SCREEN_X / 2 - (label.get_width() / 2), SCREEN_Y / 2 - (label.get_height() / 2)))
+    pygame.display.flip()
+    time.sleep(2)
+    pygame.quit()
+
 #### UTILITY METHODS
 
 def translate(value, oldMin, oldMax, newMin, newMax):
@@ -431,7 +455,6 @@ def translate(value, oldMin, oldMax, newMin, newMax):
 carryOn = True
 
 # MAIN PROGRAM LOOP
-##progressBar = ProgressBar(SCREEN_X-40, 10, 30, SCREEN_Y-20, 1000)
 level = Level(1, myfont)
 while carryOn:
     level.checkInputs(pygame.event.get())
