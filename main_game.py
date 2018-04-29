@@ -29,14 +29,16 @@ ROCKET_MAN_SONG_PATH = 'rocket-man.mp3'
 pygame.mixer.pre_init(44100, -16, 2, 2048) # setup mixer to avoid sound lag
 pygame.mixer.init()
 pygame.mixer.music.load(ROCKET_MAN_SONG_PATH)
-pygame.mixer.music.play(-1)
+#pygame.mixer.music.play(-1)
 
 # --- Limit to 60 frames per second
 clock.tick(60)
 
 # game font, 28pt
 FONT_PATH = "Font/Novecento WideDemiBold.otf"
-myfont = pygame.font.Font(FONT_PATH, 28)
+headerFont = pygame.font.Font(FONT_PATH, 28)
+subHeaderFont = pygame.font.Font(FONT_PATH, 16)
+
 
 class ScoreCounter:
     
@@ -177,7 +179,7 @@ class FloatingPoint:
 
     def draw(self):
         ## TODO try to refactor this
-        label = myfont.render(str(self.value), 1, WHITE)
+        label = headerFont.render(str(self.value), 1, WHITE)
         surface=pygame.Surface(label.get_size())
         surface.convert_alpha().fill((0, 0, 0, 0))
         surface.set_colorkey((0,0,0))
@@ -301,9 +303,9 @@ class ProgressBar:
 
 class Level:
 
-    def __init__(self, levelNumber, font):
+    def __init__(self, levelNumber):
         self.levelNumber = levelNumber
-        self.score = ScoreCounter(font)
+        self.score = ScoreCounter(headerFont)
 
         self.floatingPoints = []
 
@@ -401,7 +403,7 @@ class Level:
             return False
 
         if (not(canUpdate)):
-            showEndOfLevel()
+            showEndOfLevel(self)
 
         return True
 
@@ -420,20 +422,22 @@ def showGameOverScreen():
     filter.fill((0,0,0))
     screen.blit(filter, (0,0))
     # draw game over text
-    label = myfont.render("G A M E  O V E R", 1, WHITE)
+    label = headerFont.render("G A M E  O V E R", 1, WHITE)
     screen.blit(label, (SCREEN_X / 2 - (label.get_width() / 2), SCREEN_Y / 2 - (label.get_height() / 2)))
     pygame.display.flip()
     time.sleep(2)
     pygame.quit()
 
-def showEndOfLevel():
+def showEndOfLevel(level):
     filter = pygame.Surface((SCREEN_X,SCREEN_Y))
     filter.set_alpha(128)
     filter.fill((0,0,0))
     screen.blit(filter, (0,0))
     # draw game over text
-    label = myfont.render("L E V E L  C O M P L E T E !", 1, WHITE)
-    screen.blit(label, (SCREEN_X / 2 - (label.get_width() / 2), SCREEN_Y / 2 - (label.get_height() / 2)))
+    header = headerFont.render("L E V E L  C O M P L E T E !", 1, WHITE)
+    screen.blit(header, (SCREEN_X / 2 - (header.get_width() / 2), SCREEN_Y / 2 - (header.get_height() / 2)))
+    subheader = subHeaderFont.render("H I G H S C O R E : " + str(level.score.score), 1, WHITE)
+    screen.blit(subheader, (SCREEN_X / 2 - (subheader.get_width() / 2), SCREEN_Y / 2 + (subheader.get_height())))
     pygame.display.flip()
     time.sleep(2)
     pygame.quit()
@@ -456,7 +460,7 @@ def translate(value, oldMin, oldMax, newMin, newMax):
 carryOn = True
 
 # MAIN PROGRAM LOOP
-level = Level(1, myfont)
+level = Level(1)
 while carryOn:
     level.checkInputs(pygame.event.get())
     carryOn = level.update(screen)
