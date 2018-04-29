@@ -29,7 +29,7 @@ ROCKET_MAN_SONG_PATH = 'rocket-man.mp3'
 pygame.mixer.pre_init(44100, -16, 2, 2048) # setup mixer to avoid sound lag
 pygame.mixer.init()
 pygame.mixer.music.load(ROCKET_MAN_SONG_PATH)
-#pygame.mixer.music.play(-1)
+pygame.mixer.music.play(-1)
 
 # --- Limit to 60 frames per second
 clock.tick(60)
@@ -378,10 +378,11 @@ class Level:
             edible.move(self.kid, self)
             edible.draw()
 
+        moonCollision = False;
         for moon in self.moons:
             moon.move()
             moon.draw()
-            moonCollision = moon.isCollided(self.kid)
+            moonCollision = moonCollision or moon.isCollided(self.kid)
 
         for point in self.floatingPoints:
             point.move()
