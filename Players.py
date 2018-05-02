@@ -57,12 +57,12 @@ class BiscuitBot(SpaceKid):
 
     def decideMove(self, obstacles):
         # create a row vector for all the inputs and set them in the neural network
-        inputs = np.array([self.posx / self.screenX,
+        inputs = np.array([self.posx / (self.screenX*2), # 2 * screen width as the comets are often off-screen
                             self.posy / self.screenY])
         # add moon data to the inputs
         # TODO work out how to cope with variable amount of obstacles
         for obstacle in obstacles:
-            inputs = np.append(inputs, obstacle.posx / self.screenX)
+            inputs = np.append(inputs, obstacle.posx / (self.screenX*2))
             inputs = np.append(inputs, obstacle.posy / self.screenY)
         self.brain.setInputData(inputs)
         # get the computed actions based on the inputs
@@ -91,13 +91,19 @@ class BiscuitBot(SpaceKid):
 #         newGeneration.append(BiscuitBot(0, randint(0,SCREEN_Y), SCREEN_X, SCREEN_Y))
 #     return newGeneration
 
-def getNextGeneration(deadGeneration, mutationRate, SCREEN_X, SCREEN_Y):
+def getNextGeneration(deadGeneration, mutationRate, SCREEN_X, SCREEN_Y, maxScore):
     deadGeneration = calculateRelativeFitnesses(deadGeneration)
     newGeneration = []
-    for deadmon in deadGeneration:
+    if (deadGeneration[-1].score > maxScore):
+        # TODO check this - saved best boys are crap
+        print("SAVING NEW BEST BOY!")
+        deadGeneration[-1].brain.persist('SavedBestBoy.bin')
+    for deadPerson in deadGeneration:
         deadMember = pickOneMember(deadGeneration)
-        mutatedMemberBrain = deadMember.brain.copy().mutate(mutationRate)
-        newGeneration.append(BiscuitBot(0, randint(0,SCREEN_Y), SCREEN_X, SCREEN_Y, brain = mutatedMemberBrain))
+        mutateMemberBrain = deadMember.brain.copy().mutate(mutationRate)
+        # print(mutateMemberBrain.weightsIH)
+        # print(mutateMemberBrain.weightsHO)
+        newGeneration.append(BiscuitBot(50, randint(0,SCREEN_Y), SCREEN_X, SCREEN_Y, brain = mutateMemberBrain))
     return newGeneration
 
     # inputs for NN:

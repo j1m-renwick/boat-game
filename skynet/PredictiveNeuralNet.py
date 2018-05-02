@@ -1,13 +1,14 @@
 import numpy as np
 from copy import deepcopy
 from random import *
+import pickle
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x));
 
 def mutate(currentValue, mutationRate):
     if (random() < mutationRate):
-        offset = np.random.normal() * 0.5
+        offset = np.random.normal(scale=0.5)
         return currentValue + offset
     else:
         return currentValue
@@ -29,6 +30,7 @@ class PredictiveNeuralNet:
         biasAndInputs = np.append(np.array([1]), inputVector)
         # convert the row vector to a column vector
         self.inputData = biasAndInputs[np.newaxis].T
+        # print(self.inputData)
 
     def createWeightMatrices(self):
         # set up weight matrices with random starting values
@@ -56,15 +58,29 @@ class PredictiveNeuralNet:
         return self.outputData
 
     def copy(self):
-        copy =  deepcopy(self)
+        copiedSelf =  deepcopy(self)
         # clear the input data, just in case...
-        copy.inputData = None
-        return copy
+        copiedSelf.inputData = None
+        return copiedSelf
 
     def mutate(self, mutationRate):
         # mutate the brain!!....nerg....argh.....kill all humans...etc
         self.weightsIH = np.array(list(map(lambda p: mutate(p, 0.1), self.weightsIH)))
         self.weightsHO = np.array(list(map(lambda p: mutate(p, 0.1), self.weightsHO)))
+        return self
+
+    def persist(self, fileName):
+        binary_file = open(fileName,mode='wb')
+        pickle.dump(self, binary_file)
+        binary_file.close()
+        return
+
+    @staticmethod
+    def load(fileName):
+        binary_file = open(fileName, "rb")
+        loadedNeuralNet = pickle.load(binary_file)
+        binary_file.close()
+        return loadedNeuralNet
 
 # nn = PredictiveNeuralNet(2,10,2)
 #

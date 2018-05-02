@@ -262,7 +262,10 @@ class Level:
         self.kids = []
         self.deadKids = [] # pretty dark name!!
         for i in range (0, 200):
-            self.kids.append(BiscuitBot(0, 0, SCREEN_X, SCREEN_Y))
+            self.kids.append(BiscuitBot(50, randint(0, SCREEN_Y), SCREEN_X, SCREEN_Y))
+
+        # self.maxScore.score = 9999
+        # self.kids.append(BiscuitBot(50, randint(0, SCREEN_Y), SCREEN_X, SCREEN_Y, brain = PredictiveNeuralNet.load("SavedBestBoy.bin")))
 
         # start scheduled job to generate new moon every 10 seconds
         # self.sched = BackgroundScheduler()
@@ -298,7 +301,7 @@ class Level:
     def update(self, screen):
 
         if (len(self.kids) == 0):
-            self.kids = getNextGeneration(self.deadKids, 0.1, SCREEN_X, SCREEN_Y)
+            self.kids = getNextGeneration(self.deadKids, 0.05, SCREEN_X, SCREEN_Y, self.maxScore.score)
             self.deadKids = []
             self.moons = []
             self.moons.append(Moon(SCREEN_X, randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
@@ -363,7 +366,8 @@ class Level:
         # self.maxScore.draw(80)
 
         # only render graphics every so often, to hopefully speed up the while loop
-        if (pygame.time.get_ticks() % 10 == 0):
+        # TODO turn this into a slider or something
+        if (pygame.time.get_ticks() % 25 == 0):
             screen.fill(OFF_BLACK)
             for background in self.backgrounds:
                 background.draw()
