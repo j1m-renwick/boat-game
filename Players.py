@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 from random import *
+import math
 from skynet.PredictiveNeuralNet import PredictiveNeuralNet
 from skynet.Evolution import *
 
@@ -34,13 +35,13 @@ class SpaceKid:
 
     def move(self, moveX, moveY):
         # 0 = no change, 1 = positive change, -1 = negative change
-        if (moveY < 0):
+        if (moveY == -1):
             self.posy = min(self.screenY-self.height, max(0, self.posy-self.speed))
-        else:
+        elif(moveY == 1):
             self.posy = min(self.screenY-self.height, max(0, self.posy+self.speed))
-        if (moveX < 0):
+        if (moveX == -1):
             self.posx = min(self.screenX/2, max(0, self.posx-self.speed))
-        else:
+        elif(moveX == 1):
             self.posx = min(self.screenX/2, max(0, self.posx+self.speed))
 
 class BiscuitBot(SpaceKid):
@@ -51,37 +52,44 @@ class BiscuitBot(SpaceKid):
         self.fitness = -1 # setting initial fitness as -1
         # set up the neural net! 2 outputs - up/down/still and left/right/still
         if (brain == None):
-            self.brain = PredictiveNeuralNet(10,10,2)
+            self.brain = PredictiveNeuralNet(3,20,1)
         else:
             self.brain = brain
 
-    def decideMove(self, obstacles):
+    # def findNextObstacle(self, obstacles):
+    #     nearestX = -1
+    #     nearestY = -1
+    #     for obstacle in obstacles:
+    #         if (obstacle.posx - self.posx > obstacle.width
+    #             and obstacle.posx < nearestX):
+    #             nearestX = obstacle.posx
+    #             nearestY = obstacle.posy
+    #     return nearestX, nearestY
+
+    def decideMove(self, moon, removedMoonY):
+
         # create a row vector for all the inputs and set them in the neural network
-        inputs = np.array([self.posx / (self.screenX*2), # 2 * screen width as the comets are often off-screen
-                            self.posy / self.screenY])
-        # add moon data to the inputs
-        # TODO work out how to cope with variable amount of obstacles
-        for obstacle in obstacles:
-            inputs = np.append(inputs, obstacle.posx / (self.screenX*2))
-            inputs = np.append(inputs, obstacle.posy / self.screenY)
+        inputs = np.array([(moon.posx - self.posx) / self.screenX,
+                            self.posy / self.screenY,
+                            removedMoonY / self.screenY])
         self.brain.setInputData(inputs)
         # get the computed actions based on the inputs
         outputs = self.brain.predict()
         # assess each of the output values and determine what moves to make
         # TODO add a third option for doing nothing??
-        if (outputs[0] <= 0.33):
+        if (outputs[0] < 0.5):
             # RIGHT
-            self.move(1,0)
-        elif(outputs[0] >= 0.66):
-            # LEFT
-            self.move(-1,0)
-
-        if (outputs[1] <= 0.33):
-            # UP
             self.move(0,-1)
-        elif(outputs[1] >= 0.66):
-            # DOWN
+        else:
+            # LEFT
             self.move(0,1)
+
+        # if (outputs[1] <= 0.5):
+        #     # UP
+        #     self.move(0,-1)
+        # else:
+        #     # DOWN
+        #     self.move(0,1)
 
         self.score += 1
 

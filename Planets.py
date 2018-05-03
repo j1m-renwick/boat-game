@@ -1,5 +1,6 @@
 import pygame
 from random import *
+from copy import copy
 
 class Planet:
 
@@ -63,5 +64,43 @@ class Moon(Planet):
         return not(kidMask.overlap(moonMask,(int(self.posx - kid.posx), int(self.posy - kid.posy))) == None)
 
     def reset(self):
-        self.posx = self.screenX+(self.screenX/4)
-        self.posy = randint(0, self.screenY - self.height)
+        self.posx = self.screenX
+        self.posy = MoonPlacer.getNextMoonPlacement()
+
+class MoonPlacer:
+
+    moonYCoords = []
+    currentSubSet = []
+    previousSubSet = []
+
+    index = 0
+
+    @staticmethod
+    def initialise(screenY):
+        MoonPlacer.moonYCoords = [0, screenY / 4, screenY / 2, (screenY / 4)*3]
+        MoonPlacer.getNextCombination()
+
+    @staticmethod
+    def getNextMoonPlacement():
+        chosenValue = choice(MoonPlacer.currentSubSet)
+        # print(MoonPlacer.currentSubSet)
+        # print("REMOVING: " + str(chosenValue))
+        # print("generated: " + str(chosenValue))
+        MoonPlacer.currentSubSet.remove(chosenValue)
+        # after the wave (when one entry remains) reset all of the available positions
+        if (len(MoonPlacer.currentSubSet) == 0):
+            MoonPlacer.getNextCombination()
+        return chosenValue
+        # MoonPlacer.index = 0 if (MoonPlacer.index+1) % 4 == 0 else MoonPlacer.index + 1
+
+    @staticmethod
+    def getNextCombination():
+        while True:
+            MoonPlacer.currentSubSet = copy(MoonPlacer.moonYCoords)
+            MoonPlacer.removedMoonY = choice(MoonPlacer.currentSubSet)
+            MoonPlacer.currentSubSet.remove(MoonPlacer.removedMoonY)
+            # if the generated combination does not match with the previous, then
+            # save the previous set as this one and continue
+            if (MoonPlacer.currentSubSet != MoonPlacer.previousSubSet):
+                MoonPlacer.previousSubSet = copy(MoonPlacer.currentSubSet)
+                break

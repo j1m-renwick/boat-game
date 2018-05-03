@@ -226,6 +226,9 @@ class ProgressBar:
 class Level:
 
     def __init__(self, levelNumber):
+
+        MoonPlacer.initialise(SCREEN_Y)
+
         self.levelNumber = levelNumber
         self.score = ScoreCounter(headerFont)
         self.maxScore = ScoreCounter(headerFont)
@@ -253,16 +256,15 @@ class Level:
 
         # create planet objects in front of space kid - these collide with him
         self.moons = []
-        self.moons.append(Moon(SCREEN_X, randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
-        self.moons.append(Moon(SCREEN_X+(SCREEN_X/4), randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
-        self.moons.append(Moon(SCREEN_X+(SCREEN_X/2), randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
-        self.moons.append(Moon(SCREEN_X+((SCREEN_X/4) * 3), randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
+        self.moons.append(Moon(SCREEN_X, MoonPlacer.getNextMoonPlacement(), 25, SCREEN_X, SCREEN_Y))
+        self.moons.append(Moon(SCREEN_X, MoonPlacer.getNextMoonPlacement(), 25, SCREEN_X, SCREEN_Y))
+        self.moons.append(Moon(SCREEN_X, MoonPlacer.getNextMoonPlacement(), 25, SCREEN_X, SCREEN_Y))
 
         # self.kid = SpaceKid(55, 200, SCREEN_X, SCREEN_Y)
         self.kids = []
         self.deadKids = [] # pretty dark name!!
         for i in range (0, 200):
-            self.kids.append(BiscuitBot(50, randint(0, SCREEN_Y), SCREEN_X, SCREEN_Y))
+            self.kids.append(BiscuitBot(randint(0, 50), randint(0, SCREEN_Y), SCREEN_X, SCREEN_Y))
 
         # self.maxScore.score = 9999
         # self.kids.append(BiscuitBot(50, randint(0, SCREEN_Y), SCREEN_X, SCREEN_Y, brain = PredictiveNeuralNet.load("SavedBestBoy.bin")))
@@ -301,15 +303,16 @@ class Level:
     def update(self, screen):
 
         if (len(self.kids) == 0):
-            self.kids = getNextGeneration(self.deadKids, 0.05, SCREEN_X, SCREEN_Y, self.maxScore.score)
+            self.kids = getNextGeneration(self.deadKids, 0.1, SCREEN_X, SCREEN_Y, self.maxScore.score)
             self.deadKids = []
             self.moons = []
-            self.moons.append(Moon(SCREEN_X, randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
-            self.moons.append(Moon(SCREEN_X+(SCREEN_X/4), randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
-            self.moons.append(Moon(SCREEN_X+(SCREEN_X/2), randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
-            self.moons.append(Moon(SCREEN_X+((SCREEN_X/4) * 3), randint(0, SCREEN_Y), 25, SCREEN_X, SCREEN_Y))
+            self.moons.append(Moon(SCREEN_X, MoonPlacer.getNextMoonPlacement(), 25, SCREEN_X, SCREEN_Y))
+            self.moons.append(Moon(SCREEN_X, MoonPlacer.getNextMoonPlacement(), 25, SCREEN_X, SCREEN_Y))
+            self.moons.append(Moon(SCREEN_X, MoonPlacer.getNextMoonPlacement(), 25, SCREEN_X, SCREEN_Y))
             self.maxScore.score = max(self.maxScore.score, self.score.score)
             self.score.score = 0
+
+
 
         # update all level objects and, if game over, return false - otherwise return true
         # screen.fill(OFF_BLACK)
@@ -322,7 +325,7 @@ class Level:
 
         # self.kid.draw(screen)
         for kid in self.kids:
-            kid.decideMove(self.moons)
+            kid.decideMove(self.moons[0], MoonPlacer.removedMoonY)
             # kid.draw(screen)
 
         # for edible in self.edibles:
@@ -367,7 +370,7 @@ class Level:
 
         # only render graphics every so often, to hopefully speed up the while loop
         # TODO turn this into a slider or something
-        if (pygame.time.get_ticks() % 25 == 0):
+        if (pygame.time.get_ticks()):# % 25 == 0):
             screen.fill(OFF_BLACK)
             for background in self.backgrounds:
                 background.draw()
